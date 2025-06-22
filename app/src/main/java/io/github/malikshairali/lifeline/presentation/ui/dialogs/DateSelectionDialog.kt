@@ -1,27 +1,29 @@
 package io.github.malikshairali.lifeline.presentation.ui.dialogs
 
+import android.content.Context
 import android.os.Build
+import android.view.inputmethod.InputMethodManager
 import androidx.annotation.RequiresApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DateRangePicker
@@ -29,7 +31,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -39,7 +40,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SelectableDates
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -53,12 +53,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import java.time.Instant
 import java.time.LocalDate
 import java.time.Month
 import java.time.YearMonth
@@ -93,16 +98,16 @@ object PastOrPresentSelectableDates : SelectableDates {
 }
 
 @RequiresApi(Build.VERSION_CODES.O) // For modern Java Time API
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun DateSelectionDialog(
+    modifier: Modifier = Modifier,
     onDismiss: () -> Unit,
-    onConfirmSelection: (selectionType: DateSelectionType, startDate: LocalDate, endDate: LocalDate) -> Unit
+    onConfirmSelection: (selectionType: DateSelectionType, startDate: Long, endDate: Long) -> Unit
 ) {
     var selectedType by remember { mutableStateOf(DateSelectionType.SINGLE_DAY) }
     val currentDateTime = LocalDate.now()
 
-    // States for DatePicker and DateRangePicker
     val singleDatePickerState = rememberDatePickerState(
         initialSelectedDateMillis = System.currentTimeMillis(),
         yearRange = (currentDateTime.year - 20)..(currentDateTime.year),
@@ -115,21 +120,16 @@ fun DateSelectionDialog(
         selectableDates = PastOrPresentSelectableDates
     )
 
-    // States for custom Month/Year Pickers
     var selectedMonthForMonthYearPicker by remember { mutableStateOf(currentDateTime.month) }
     var selectedYearForMonthYearPicker by remember { mutableIntStateOf(currentDateTime.year) }
     var selectedYearForYearPicker by remember { mutableIntStateOf(currentDateTime.year) }
 
     val yearRangeList = remember {
         ((currentDateTime.year - 20)..(currentDateTime.year)).toList().sortedDescending()
-    } // More user friendly
+    }
     val monthList = remember { Month.entries }
 
-    val convertMillisToLocalDate = { millis: Long? ->
-        millis?.let {
-            Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate()
-        }
-    }
+    val albumName = remember { mutableStateOf("") }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -139,10 +139,9 @@ fun DateSelectionDialog(
             dismissOnBackPress = true
         )
     ) {
-        // Full screen content with a background
         Scaffold(
-            modifier = Modifier.fillMaxSize(),
-//                .background(MaterialTheme.colorScheme.surface),
+            modifier = modifier
+                .imePadding().hideKeyboardOnTap(),
             topBar = {
                 TopAppBar(
                     navigationIcon = {
@@ -150,81 +149,33 @@ fun DateSelectionDialog(
                             Icon(imageVector = Icons.Filled.Close, contentDescription = "Close")
                         }
                     },
-                    title = { Text("Create New Album") }
-                )
-            },
-            bottomBar = {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp)
-                ) {
-                    Button(
-                        modifier = Modifier.fillMaxSize(),
-                        shape = RectangleShape,
-                        onClick = {
-                            val today = LocalDate.now(ZoneId.systemDefault()) // Fallback
-                            when (selectedType) {
-                                DateSelectionType.SINGLE_DAY -> {
-                                    val selectedDate =
-                                        convertMillisToLocalDate(singleDatePickerState.selectedDateMillis)
-                                            ?: today
-                                    onConfirmSelection(
-                                        DateSelectionType.SINGLE_DAY,
-                                        selectedDate,
-                                        selectedDate
-                                    )
-                                }
-
-                                DateSelectionType.DATE_RANGE -> {
-                                    val startDate =
-                                        convertMillisToLocalDate(dateRangePickerState.selectedStartDateMillis)
-                                            ?: today
-                                    val endDate =
-                                        convertMillisToLocalDate(dateRangePickerState.selectedEndDateMillis)
-                                            ?: startDate // Ensure endDate isn't before startDate
-                                    onConfirmSelection(
-                                        DateSelectionType.DATE_RANGE,
-                                        startDate,
-                                        endDate
-                                    )
-                                }
-
-                                DateSelectionType.MONTH -> {
-                                    val yearMonth = YearMonth.of(
-                                        selectedYearForMonthYearPicker,
-                                        selectedMonthForMonthYearPicker
-                                    )
-                                    val startDate = yearMonth.atDay(1)
-                                    val endDate = yearMonth.atEndOfMonth()
-                                    onConfirmSelection(DateSelectionType.MONTH, startDate, endDate)
-                                }
-
-                                DateSelectionType.YEAR -> {
-                                    val startDate =
-                                        LocalDate.of(selectedYearForYearPicker, Month.JANUARY, 1)
-                                    val endDate =
-                                        LocalDate.of(selectedYearForYearPicker, Month.DECEMBER, 31)
-                                    onConfirmSelection(DateSelectionType.YEAR, startDate, endDate)
-                                }
-                            }
-                            onDismiss()
-                        }
-                    ) {
-                        Text("Import")
+                    title = {
+                        Text(
+                            text = "Create New Album",
+                            fontWeight = FontWeight.Bold
+                        )
                     }
-                }
+                )
             }
         ) { innerPadding ->
-            // Content of your dialog
             Column(
                 modifier = Modifier
                     .padding(innerPadding)
                     .fillMaxSize()
-                    .padding(16.dp)
-                    .verticalScroll(rememberScrollState()),
-//                horizontalAlignment = Alignment.CenterHorizontally
+                    .padding(horizontal = 16.dp)
+                    .verticalScroll(rememberScrollState())
             ) {
+                OutlinedTextField(
+                    value = albumName.value,
+                    onValueChange = {
+                        albumName.value = it
+                    },
+                    label = { Text("Album title") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
                 Text(
                     text = "Import photos based on a:",
                     style = MaterialTheme.typography.titleMedium
@@ -235,6 +186,7 @@ fun DateSelectionDialog(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .fillMaxWidth()
+                            .height(48.dp)
                             .clickable { selectedType = type }
                             .padding(vertical = 4.dp)
                     ) {
@@ -260,7 +212,7 @@ fun DateSelectionDialog(
                     DateSelectionType.SINGLE_DAY -> {
                         DatePicker(
                             state = singleDatePickerState,
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.heightIn(max = 500.dp),
                             showModeToggle = false
                         )
                     }
@@ -268,9 +220,7 @@ fun DateSelectionDialog(
                     DateSelectionType.DATE_RANGE -> {
                         DateRangePicker(
                             state = dateRangePickerState,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(max = 450.dp),
+                            modifier = Modifier.heightIn(max = 500.dp),
                             showModeToggle = false
                         )
                     }
@@ -294,13 +244,71 @@ fun DateSelectionDialog(
                         )
                     }
                 }
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                Button(
+                    modifier = Modifier.fillMaxSize(),
+                    shape = RectangleShape,
+                    onClick = {
+                        val today = LocalDate.now(ZoneId.systemDefault())
+                        when (selectedType) {
+                            DateSelectionType.SINGLE_DAY -> {
+                                val selectedDate = singleDatePickerState.selectedDateMillis
+                                    ?: today.toEpochMillisEndOfDay()
+                                onConfirmSelection(
+                                    DateSelectionType.SINGLE_DAY,
+                                    selectedDate,
+                                    selectedDate
+                                )
+                            }
+
+                            DateSelectionType.DATE_RANGE -> {
+                                val startDate =
+                                    dateRangePickerState.selectedStartDateMillis
+                                        ?: today.toEpochMillisStartOfDay()
+                                val endDate =
+                                    dateRangePickerState.selectedEndDateMillis
+                                        ?: today.toEpochMillisEndOfDay()
+                                onConfirmSelection(
+                                    DateSelectionType.DATE_RANGE,
+                                    startDate,
+                                    endDate
+                                )
+                            }
+
+                            DateSelectionType.MONTH -> {
+                                val yearMonth = YearMonth.of(
+                                    selectedYearForMonthYearPicker,
+                                    selectedMonthForMonthYearPicker
+                                )
+                                val startDate = yearMonth.atDay(1).toEpochMillisStartOfDay()
+                                val endDate = yearMonth.atEndOfMonth().toEpochMillisEndOfDay()
+                                onConfirmSelection(DateSelectionType.MONTH, startDate, endDate)
+                            }
+
+                            DateSelectionType.YEAR -> {
+                                val startDate =
+                                    LocalDate.of(selectedYearForYearPicker, Month.JANUARY, 1)
+                                        .toEpochMillisStartOfDay()
+                                val endDate =
+                                    LocalDate.of(selectedYearForYearPicker, Month.DECEMBER, 31)
+                                        .toEpochMillisEndOfDay()
+                                onConfirmSelection(DateSelectionType.YEAR, startDate, endDate)
+                            }
+                        }
+                        onDismiss()
+                    }
+                ) {
+                    Text("Import")
+                }
             }
         }
     }
 }
 
 @RequiresApi(Build.VERSION_CODES.O)
-@OptIn(ExperimentalMaterial3Api::class) // For ExposedDropdownMenuBox
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MonthYearPicker(
     months: List<Month>,
@@ -318,29 +326,27 @@ fun MonthYearPicker(
         horizontalArrangement = Arrangement.spacedBy(
             8.dp,
             Alignment.CenterHorizontally
-        ), // Spacing between dropdowns
+        ),
         verticalAlignment = Alignment.CenterVertically
     ) {
         var monthExpanded by remember { mutableStateOf(false) }
         var yearExpanded by remember { mutableStateOf(false) }
 
-        // Month Picker using ExposedDropdownMenuBox for better styling
         ExposedDropdownMenuBox(
             expanded = monthExpanded,
             onExpandedChange = { monthExpanded = !monthExpanded },
             modifier = Modifier.weight(1f)
         ) {
             OutlinedTextField(
-                // Or use TextField if you prefer standard Material look
                 value = selectedMonth.getDisplayName(TextStyle.FULL, Locale.getDefault()),
-                onValueChange = {}, // Not editable
+                onValueChange = {},
                 readOnly = true,
                 label = { Text("Month") },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = monthExpanded) },
                 modifier = Modifier.menuAnchor(
                     MenuAnchorType.PrimaryNotEditable,
                     true
-                ) // Important for positioning the dropdown
+                )
             )
             ExposedDropdownMenu(
                 expanded = monthExpanded,
@@ -356,20 +362,18 @@ fun MonthYearPicker(
                     )
                 }
             }
-        } // End of Month ExposedDropdownMenuBox
+        }
 
-        Spacer(modifier = Modifier.width(8.dp)) // Spacer between dropdowns
+        Spacer(modifier = Modifier.width(8.dp))
 
-        // Year Picker using ExposedDropdownMenuBox
         ExposedDropdownMenuBox(
             expanded = yearExpanded,
             onExpandedChange = { yearExpanded = !yearExpanded },
             modifier = Modifier.weight(1f)
         ) {
             OutlinedTextField(
-                // Or use TextField
                 value = selectedYear.toString(),
-                onValueChange = {}, // Not editable
+                onValueChange = {},
                 readOnly = true,
                 label = { Text("Year") },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = yearExpanded) },
@@ -389,12 +393,12 @@ fun MonthYearPicker(
                     )
                 }
             }
-        } // End of Year ExposedDropdownMenuBox
-    } // End of Row
-} // End of MonthYearPicker
+        }
+    }
+}
 
 @RequiresApi(Build.VERSION_CODES.O)
-@OptIn(ExperimentalMaterial3Api::class) // For ExposedDropdownMenuBox
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun YearPicker(
     years: List<Int>,
@@ -404,7 +408,7 @@ fun YearPicker(
 ) {
     var yearExpanded by remember { mutableStateOf(false) }
 
-    Box( // Box to center the single dropdown
+    Box(
         modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 16.dp),
@@ -413,19 +417,18 @@ fun YearPicker(
         ExposedDropdownMenuBox(
             expanded = yearExpanded,
             onExpandedChange = { yearExpanded = !yearExpanded },
-            modifier = Modifier.fillMaxWidth(0.7f) // Make it a bit narrower than full width
+            modifier = Modifier.fillMaxWidth(0.7f)
         ) {
             OutlinedTextField(
-                // Or use TextField
                 value = selectedYear.toString(),
-                onValueChange = {}, // Not editable
+                onValueChange = {},
                 readOnly = true,
                 label = { Text("Year") },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = yearExpanded) },
                 modifier = Modifier.menuAnchor(
                     MenuAnchorType.PrimaryNotEditable,
                     true
-                ) // Important for positioning the dropdown
+                )
             )
             ExposedDropdownMenu(
                 expanded = yearExpanded,
@@ -443,15 +446,14 @@ fun YearPicker(
             }
         }
     }
-} // End of YearPicker
+}
 
 
-// Previews
 @RequiresApi(Build.VERSION_CODES.O)
 @Preview(showBackground = true, widthDp = 420, name = "Dialog - Single Day")
 @Composable
 fun DateSelectionDialogPreviewSingleDay() {
-    MaterialTheme { // Wrap with your app's theme or MaterialTheme
+    MaterialTheme {
         DateSelectionDialog(onDismiss = {}, onConfirmSelection = { _, _, _ -> })
     }
 }
@@ -460,10 +462,7 @@ fun DateSelectionDialogPreviewSingleDay() {
 @Preview(showBackground = true, widthDp = 420, heightDp = 750, name = "Dialog - Month/Year")
 @Composable
 fun DateSelectionDialogPreviewMonthYear() {
-    // To see this specific state in preview, we might need to pass an initial
-    // selectedType or have a way to set it. For now, you can click to it in interactive mode.
-    // Let's make a state here to demonstrate for preview purposes.
-    var selectedType by remember { mutableStateOf(DateSelectionType.MONTH) } // Default to MONTH for this preview
+    var selectedType by remember { mutableStateOf(DateSelectionType.MONTH) }
     val currentDateTime = LocalDate.now()
     var selectedMonthForMonthYearPicker by remember { mutableStateOf(currentDateTime.month) }
     var selectedYearForMonthYearPicker by remember { mutableStateOf(currentDateTime.year) }
@@ -472,9 +471,7 @@ fun DateSelectionDialogPreviewMonthYear() {
     }
     val monthList = remember { Month.entries }
 
-
     MaterialTheme {
-        // This is a simplified version of the main dialog just for previewing MonthYearPicker effectively
         AlertDialog(
             onDismissRequest = {},
             confirmButton = { TextButton(onClick = {}) { Text("OK") } },
@@ -533,4 +530,34 @@ fun DateSelectionDialogPreviewMonthYear() {
             }
         )
     }
+}
+
+fun Modifier.hideKeyboardOnTap(): Modifier = composed {
+    val context = LocalContext.current
+    val view = LocalView.current
+    val focusManager = LocalFocusManager.current
+    val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+
+    this.pointerInput(Unit) {
+        detectTapGestures {
+            view.clearFocus()
+            focusManager.clearFocus()
+            imm.hideSoftInputFromWindow(view.windowToken, 0)
+        }
+    }
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
+fun LocalDate.toEpochMillisStartOfDay(): Long {
+    return this.atStartOfDay(ZoneId.systemDefault())
+        .toInstant()
+        .toEpochMilli()
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
+fun LocalDate.toEpochMillisEndOfDay(): Long {
+    return this.plusDays(1)
+        .atStartOfDay(ZoneId.systemDefault())
+        .toInstant()
+        .toEpochMilli() - 1
 }

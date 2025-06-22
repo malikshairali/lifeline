@@ -1,4 +1,4 @@
-package io.github.malikshairali.lifeline.presentation.ui
+package io.github.malikshairali.lifeline.presentation.ui.timeline
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -43,22 +43,23 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.rememberAsyncImagePainter
-import io.github.malikshairali.lifeline.presentation.MainViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.koin.compose.viewmodel.koinViewModel
 import kotlin.math.absoluteValue
 
 @Composable
 fun TimelineScreen(
-    viewModel: MainViewModel = MainViewModel()
+    viewModel: TimelineViewModel = koinViewModel(),
+    id: Long
 ) {
-    val similarPhotos by viewModel.similarPhotos.collectAsState()
+    val photos by viewModel.photos.collectAsState()
 
     val context = LocalContext.current
 
     LaunchedEffect(Unit) {
-        viewModel.getPhotos(context = context)
+        viewModel.getPhotos(context = context, id = id)
     }
 
     val overlayVisible = remember { mutableStateOf(true) }
@@ -75,11 +76,11 @@ fun TimelineScreen(
     }
 
 
-    val verticalPagerState = rememberPagerState { similarPhotos.size }
+    val verticalPagerState = rememberPagerState { photos.size }
     VerticalPager(
         state = verticalPagerState, modifier = Modifier.fillMaxSize()
     ) { index ->
-        val group = similarPhotos[index]
+        val group = photos[index]
 
         Box(
             modifier = Modifier
@@ -162,7 +163,7 @@ fun TimelineScreen(
                             .padding(start = 12.dp)
                             .width(4.dp)
                             .fillMaxHeight()
-                            .background(if (index == similarPhotos.size - 1) Color.Transparent else Color.White)
+                            .background(if (index == photos.size - 1) Color.Transparent else Color.White)
                     )
                 }
             }

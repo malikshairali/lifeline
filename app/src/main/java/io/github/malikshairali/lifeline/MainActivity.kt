@@ -14,8 +14,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import io.github.malikshairali.lifeline.presentation.ui.HomeScreen
-import io.github.malikshairali.lifeline.presentation.ui.TimelineScreen
+import io.github.malikshairali.lifeline.presentation.navigation.NavExample
 import io.github.malikshairali.lifeline.presentation.util.hasReadPermission
 
 class MainActivity : ComponentActivity() {
@@ -50,7 +49,7 @@ class MainActivity : ComponentActivity() {
             }
 
             if (hasPermission) {
-                HomeScreen {  }
+                NavExample()
             }
         }
     }
