@@ -40,6 +40,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SelectableDates
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -102,8 +104,9 @@ object PastOrPresentSelectableDates : SelectableDates {
 @Composable
 fun DateSelectionDialog(
     modifier: Modifier = Modifier,
+    snakbarHostState: SnackbarHostState = SnackbarHostState(),
     onDismiss: () -> Unit,
-    onConfirmSelection: (selectionType: DateSelectionType, startDate: Long, endDate: Long) -> Unit
+    onConfirmSelection: (name: String, startDate: Long, endDate: Long) -> Unit
 ) {
     var selectedType by remember { mutableStateOf(DateSelectionType.SINGLE_DAY) }
     val currentDateTime = LocalDate.now()
@@ -140,8 +143,10 @@ fun DateSelectionDialog(
         )
     ) {
         Scaffold(
+            snackbarHost = { SnackbarHost(snakbarHostState) },
             modifier = modifier
-                .imePadding().hideKeyboardOnTap(),
+                .imePadding()
+                .hideKeyboardOnTap(),
             topBar = {
                 TopAppBar(
                     navigationIcon = {
@@ -171,7 +176,8 @@ fun DateSelectionDialog(
                         albumName.value = it
                     },
                     label = { Text("Album title") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -257,7 +263,7 @@ fun DateSelectionDialog(
                                 val selectedDate = singleDatePickerState.selectedDateMillis
                                     ?: today.toEpochMillisEndOfDay()
                                 onConfirmSelection(
-                                    DateSelectionType.SINGLE_DAY,
+                                    albumName.value,
                                     selectedDate,
                                     selectedDate
                                 )
@@ -271,7 +277,7 @@ fun DateSelectionDialog(
                                     dateRangePickerState.selectedEndDateMillis
                                         ?: today.toEpochMillisEndOfDay()
                                 onConfirmSelection(
-                                    DateSelectionType.DATE_RANGE,
+                                    albumName.value,
                                     startDate,
                                     endDate
                                 )
@@ -284,7 +290,7 @@ fun DateSelectionDialog(
                                 )
                                 val startDate = yearMonth.atDay(1).toEpochMillisStartOfDay()
                                 val endDate = yearMonth.atEndOfMonth().toEpochMillisEndOfDay()
-                                onConfirmSelection(DateSelectionType.MONTH, startDate, endDate)
+                                onConfirmSelection(albumName.value, startDate, endDate)
                             }
 
                             DateSelectionType.YEAR -> {
@@ -294,10 +300,9 @@ fun DateSelectionDialog(
                                 val endDate =
                                     LocalDate.of(selectedYearForYearPicker, Month.DECEMBER, 31)
                                         .toEpochMillisEndOfDay()
-                                onConfirmSelection(DateSelectionType.YEAR, startDate, endDate)
+                                onConfirmSelection(albumName.value, startDate, endDate)
                             }
                         }
-                        onDismiss()
                     }
                 ) {
                     Text("Import")

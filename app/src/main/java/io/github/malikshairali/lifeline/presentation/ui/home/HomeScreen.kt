@@ -32,10 +32,12 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -61,7 +63,6 @@ import org.koin.compose.viewmodel.koinViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import kotlin.random.Random
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
@@ -71,11 +72,23 @@ fun HomeScreen(
     onNavigateToTimeline: (Long) -> Unit
 ) {
     val albums by viewModel.albums.collectAsState()
-    var showDatePickerDialog by remember { mutableStateOf(false) }
+    var showCreateAlbumDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val listState = rememberLazyListState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val error by viewModel.error.collectAsState()
+
+    LaunchedEffect(error) {
+        if (error != null) {
+            snackbarHostState.showSnackbar(error!!)
+            viewModel.removeError()
+        }
+    }
 
     Scaffold(
+//        snackbarHost = {
+//            SnackbarHost(snackbarHostState)
+//        },
         topBar = {
             TopAppBar(title = {
                 Text(
@@ -91,7 +104,7 @@ fun HomeScreen(
                 exit = fadeOut()
             ) {
                 FloatingActionButton(
-                    onClick = { showDatePickerDialog = true },
+                    onClick = { showCreateAlbumDialog = true },
                     content = {
                         Icon(
                             imageVector = Icons.Filled.Add,
@@ -139,29 +152,20 @@ fun HomeScreen(
             }
         }
 
-        if (showDatePickerDialog) {
+        if (showCreateAlbumDialog) {
             DateSelectionDialog(
-                onDismiss = { showDatePickerDialog = false },
-                onConfirmSelection = { selectionType, startDate, endDate ->
-                    showDatePickerDialog = false
-                    val photos = viewModel.getPhotos(
+                snakbarHostState = snackbarHostState,
+                onDismiss = { showCreateAlbumDialog = false },
+                onConfirmSelection = { name, startDate, endDate ->
+                    val id = viewModel.getAlbumId(
                         context = context,
+                        name = name,
                         startMillis = startDate,
                         endMillis = endDate
                     )
 
-                    if (photos.isNotEmpty()) {
-                        val id = Random.nextLong()
-                        viewModel.saveAlbum(
-                            AlbumEntity(
-                                id = id,
-                                title = "New Album",
-                                startDate = startDate,
-                                endDate = endDate,
-                                coverUri = photos.first().photos.first().uri.toString(),
-                                size = photos.size
-                            )
-                        )
+                    if (id != null) {
+                        showCreateAlbumDialog = false
                         onNavigateToTimeline(id)
                     }
                 }
