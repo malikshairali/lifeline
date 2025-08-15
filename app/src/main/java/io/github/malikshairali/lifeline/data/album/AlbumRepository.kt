@@ -7,9 +7,11 @@ import org.koin.core.annotation.Single
 class AlbumRepository(
     private val albumDao: AlbumDao
 ) {
-    fun getAllAlbums(): Flow<List<AlbumEntity>> = albumDao.getAll()
-
     suspend fun insertAlbum(album: AlbumEntity) = albumDao.insert(album)
 
-    suspend fun getAlbumById(id: Long): Flow<AlbumEntity?> = albumDao.getAlbumById(id)
+    fun getAlbumById(id: Long): Flow<AlbumEntity?> = albumDao.getAlbumById(id)
+
+    fun getAllAlbums(): Flow<List<AlbumEntity>> = albumDao.getAlbums()
+
+    suspend fun insertPhotos(photos: List<PhotoEntity>) = albumDao.insertPhotos(photos)
 }

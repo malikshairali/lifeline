@@ -11,9 +11,12 @@ interface AlbumDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(album: AlbumEntity)
 
-    @Query("SELECT * FROM albums ORDER BY startDate DESC")
-    fun getAll(): Flow<List<AlbumEntity>>
-
     @Query("SELECT * FROM albums WHERE id = :id")
     fun getAlbumById(id: Long): Flow<AlbumEntity?>
+
+    @Query("SELECT * FROM albums ORDER BY startDate DESC")
+    fun getAlbums(): Flow<List<AlbumEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertPhotos(photos: List<PhotoEntity>)
 }

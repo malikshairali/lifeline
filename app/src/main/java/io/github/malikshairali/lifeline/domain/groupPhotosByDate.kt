@@ -1,6 +1,6 @@
 package io.github.malikshairali.lifeline.domain
 
-import io.github.malikshairali.lifeline.domain.model.Photo
+import io.github.malikshairali.lifeline.data.album.PhotoEntity
 import io.github.malikshairali.lifeline.domain.model.DateGroup
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -21,7 +21,7 @@ fun Date.formatDateWithSuffix(): String {
     return dateFormat.format(this)
 }
 
-fun groupPhotosByDate(photos: List<Photo>): List<DateGroup> {
+fun groupPhotosByDate(photos: List<PhotoEntity>): List<DateGroup> {
     return photos
         .groupBy { photo ->
             val calendar = Calendar.getInstance().apply { time = Date(photo.timestamp) }
