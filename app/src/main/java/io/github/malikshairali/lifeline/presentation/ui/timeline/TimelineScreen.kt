@@ -84,6 +84,7 @@ fun TimelineScreen(
 
         Box(
             modifier = Modifier
+                .background(Color.Black)
                 .fillMaxSize()
                 .pointerInput(Unit) {
                     awaitPointerEventScope {
@@ -110,7 +111,7 @@ fun TimelineScreen(
                 Image(
                     painter = rememberAsyncImagePainter(model = photo.uri),
                     contentDescription = null,
-                    contentScale = ContentScale.Crop,
+                    contentScale = ContentScale.Fit,
                     modifier = Modifier
                         .fillMaxSize()
                         .graphicsLayer {

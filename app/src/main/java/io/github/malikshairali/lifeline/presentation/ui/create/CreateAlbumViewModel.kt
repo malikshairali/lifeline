@@ -2,11 +2,15 @@ package io.github.malikshairali.lifeline.presentation.ui.create
 
 import android.content.Context
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import io.github.malikshairali.lifeline.data.album.AlbumEntity
 import io.github.malikshairali.lifeline.data.album.AlbumRepository
 import io.github.malikshairali.lifeline.data.source.local.LocalImageDataSource
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import org.koin.android.annotation.KoinViewModel
+import kotlin.random.Random
 
 @KoinViewModel
 class CreateAlbumViewModel(
@@ -38,28 +42,21 @@ class CreateAlbumViewModel(
         )
     }
 
-//    fun createAlbum(context: Context, name: String, startMillis: Long, endMillis: Long) {
-//        val doesPhotoExist = LocalImageDataSource.doesPhotoExist(
-//            context = context,
-//            startMillis = startMillis,
-//            endMillis = endMillis
-//        )
-//
-//        if (doesPhotoExist) {
-//            _error.value = "No photos found within date range selected."
-//        } else {
-//            id = Random.nextLong()
-//            val albumEntity = AlbumEntity(
-//                id = id,
-//                title = name,
-//                startDate = startMillis,
-//                endDate = endMillis,
-//                coverUri = photos.first().uri.toString(),
-//                size = photos.size
-//            )
-//            viewModelScope.launch {
-//                albumRepository.insertAlbum(albumEntity)
-//            }
-//        }
-//    }
+    fun createAlbum(): Long {
+        val id = Random.nextLong()
+        val albumEntity = AlbumEntity(
+            id = id,
+            title = uiState.value.albumName ?: "",
+            startDate = uiState.value.fromDate ?: 0,
+            endDate = uiState.value.toDate ?: 0,
+            coverUri = uiState.value.photos?.firstOrNull()?.uri.toString(),
+            size = uiState.value.photos?.size ?: 0
+        )
+
+        viewModelScope.launch {
+            albumRepository.insertAlbum(albumEntity)
+        }
+
+        return id
+    }
 }

@@ -48,7 +48,7 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable
 fun CreateAlbum(
     onBack: () -> Unit,
-    onCreate: (id: Long) -> Unit,
+    onCreated: (id: Long) -> Unit,
     viewModel: CreateAlbumViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -165,7 +165,11 @@ fun CreateAlbum(
                 )
 
                 2 -> AlbumPreviewStep(
-                    viewModel = viewModel
+                    viewModel = viewModel,
+                    onCreate = {
+                        val id = viewModel.createAlbum()
+                        onCreated(id)
+                    }
                 )
             }
         }

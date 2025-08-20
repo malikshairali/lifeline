@@ -46,7 +46,8 @@ fun LifelineNav() {
                 is CreateAlbum -> NavEntry(key) {
                     CreateAlbum(
                         onBack = { backStack.removeLastOrNull() },
-                        onCreate = { id ->
+                        onCreated = { id ->
+                            backStack.removeLastOrNull()
                             backStack.add(Timeline(id))
                         }
                     )
